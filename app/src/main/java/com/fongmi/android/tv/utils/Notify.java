@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Notification;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
@@ -40,7 +41,7 @@ public class Notify {
 
     public static void createChannel() {
         NotificationManagerCompat notifyMgr = NotificationManagerCompat.from(App.get());
-        notifyMgr.createNotificationChannel(new NotificationChannelCompat.Builder(DEFAULT, NotificationManagerCompat.IMPORTANCE_LOW).setName("TV").build());
+        notifyMgr.createNotificationChannel(new NotificationChannelCompat.Builder(DEFAULT, NotificationManagerCompat.IMPORTANCE_LOW).setName("XMBOX").build());
     }
 
     public static String getError(int resId, Throwable e) {
@@ -49,7 +50,7 @@ public class Notify {
     }
 
     public static void show(Notification notification) {
-        if (ActivityCompat.checkSelfPermission(App.get(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
+        if (Build.VERSION.SDK_INT >= 33 && ActivityCompat.checkSelfPermission(App.get(), Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
         NotificationManagerCompat.from(App.get()).notify(ID, notification);
     }
 

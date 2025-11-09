@@ -491,7 +491,7 @@ include ':thunder'
 include ':tvbus'
 include ':zlive'
 
-rootProject.name = "TV"
+rootProject.name = "XMBOX"
 EOF
 
 echo -e "${GREEN}依赖修复完成！${NC}"

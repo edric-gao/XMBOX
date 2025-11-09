@@ -131,6 +131,8 @@ public class App extends Application {
         OkHttp.get().setDoh(Doh.objectFrom(Setting.getDoh()));
         EventBus.builder().addIndex(new EventIndex()).installDefaultEventBus();
         CaocConfig.Builder.create().backgroundMode(CaocConfig.BACKGROUND_MODE_SILENT).errorActivity(CrashActivity.class).apply();
+        // Ensure default notification channel exists for foreground playback service (TV flavor too)
+        Notify.createChannel();
         
         // 初始化自动缓存清理
         initCacheCleaner();

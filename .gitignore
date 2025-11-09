@@ -35,3 +35,24 @@ google-services.json
 
 # APK files
 apk/release/*.apk
+
+# Local configuration files
+gradle.properties.local
+local.properties
+local-repo/
+
+# Temporary files
+cleanup_project.sh
+*.tmp
+*.temp
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Duplicate release directories
+XMBOX-Release/
+
+# Tools and utilities (not part of the project)
+other/tools/bfg.jar
+other/tools/cleaner.bat

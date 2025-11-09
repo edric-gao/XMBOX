@@ -20,6 +20,6 @@ dependencyResolutionManagement {
 }
 include ':app'
 include ':catvod'
-include ':chaquo'
+// include ':chaquo' // 已移除Python支持
 include ':quickjs'
-rootProject.name = "TV"
+rootProject.name = "XMBOX"
