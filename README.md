@@ -2,7 +2,7 @@
   </h1>
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.1.1-blue.svg)
 ![Android](https://img.shields.io/badge/platform-Android-green.svg)
 ![License](https://img.shields.io/badge/license-GPL--3.0-orange.svg)
 ![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)
@@ -34,10 +34,11 @@
 - 🛡️ **稳定可靠** - 完善的错误处理和崩溃防护
 - 🌐 **网络优化** - 智能代理和DNS解析
 - 📱 **Material Design** - 现代化UI设计
+- ☁️ **WebDAV同步** - 支持观看记录和设置云端同步，支持账号模式和同步码模式
 
 ## 📥 下载安装
 
-### 最新版本: v3.1.0
+### 最新版本: v3.1.1
 
 | 平台 | ARM64-V8A | ARM V7A |
 |------|-----------|---------|
@@ -45,6 +46,7 @@
 | **📺 TV版** | [下载 (34.5MB)](https://github.com/Tosencen/XMBOX-Release/raw/main/apk/release/v3.1.0/leanback-arm64_v8a-v3.1.0.apk) | [下载 (30.5MB)](https://github.com/Tosencen/XMBOX-Release/raw/main/apk/release/v3.1.0/leanback-armeabi_v7a-v3.1.0.apk) |
 
 ### 📁 版本历史
+- **v3.1.1**: [查看v3.1.1版本](https://github.com/Tosencen/XMBOX-Release/tree/main/apk/release/v3.1.1) - 新增WebDAV同步功能和更新安装器
 - **v3.1.0**: [查看v3.1.0版本](https://github.com/Tosencen/XMBOX-Release/tree/main/apk/release/v3.1.0) - 定时器优化和画中画修复版本
 - **v3.0.9**: [查看v3.0.9版本](https://github.com/Tosencen/XMBOX-Release/tree/main/apk/release/v3.0.9) - 新增直播开关控制和UI交互优化
 - **v3.0.8**: [查看v3.0.8版本](https://github.com/Tosencen/XMBOX-Release/tree/main/apk/release/v3.0.8) - UI交互体验全面优化
@@ -133,6 +135,25 @@ XMBOX/
 - **数据库**: Room
 
 ## 📝 更新日志
+
+### v3.1.1 (2025-11-10)
+
+#### ✨ 新功能
+* **WebDAV同步功能** - 新增WebDAV云端同步功能，支持观看记录和设置的多设备同步
+  * 支持账号模式：使用WebDAV服务器账号密码进行同步
+  * 支持同步码模式：无需账号，使用同步码即可实现多设备数据共享
+  * 自动合并本地和远程数据，确保数据完整性
+* **更新安装器** - 新增UpdateInstaller工具类，优化应用更新安装体验
+* **自定义开关组件** - 新增CustomSwitch组件，提供更灵活的UI控制
+
+#### 🎨 UI优化
+* **WebDAV配置界面** - 新增WebDAV配置对话框，支持账号模式和同步码模式切换
+* **设置页面优化** - 优化设置页面布局和交互体验
+
+#### 🔧 技术改进
+* **代码同步管理** - 新增SyncCodeManager和WebDAVSyncManager，完善同步功能架构
+* **构建脚本优化** - 新增build_all_release.sh脚本，支持一键构建所有版本
+* **稳定性增强** - 优化同步逻辑，防止重复同步和数据冲突
 
 ### v3.1.0 (2025-10-28)
 
