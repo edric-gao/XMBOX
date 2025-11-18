@@ -58,7 +58,7 @@ public class HistoryActivity extends BaseActivity implements HistoryAdapter.OnCl
     }
 
     private void getHistory() {
-        mAdapter.addAll(History.get());
+        mAdapter.addAll(History.getAll()); // 显示所有视频源的观看记录
         mBinding.delete.setVisibility(mAdapter.getItemCount() > 0 ? View.VISIBLE : View.GONE);
         updateEmptyState();
     }

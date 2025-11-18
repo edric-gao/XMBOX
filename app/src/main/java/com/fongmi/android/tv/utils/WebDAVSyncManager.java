@@ -6,6 +6,7 @@ import com.fongmi.android.tv.App;
 import com.fongmi.android.tv.bean.Backup;
 import com.fongmi.android.tv.bean.History;
 import com.fongmi.android.tv.db.AppDatabase;
+import com.fongmi.android.tv.event.RefreshEvent;
 import com.github.catvod.utils.Logger;
 import com.github.catvod.utils.Prefers;
 import com.google.gson.Gson;
@@ -280,19 +281,59 @@ public class WebDAVSyncManager {
         }
         
         try {
-            // 获取所有观看记录
-            List<History> historyList = AppDatabase.get().getHistoryDao().findAll();
+            // 获取所有观看记录 - 使用findAllRecent(0)来获取所有记录（包括旧记录）
+            Logger.d("WebDAV: 开始查询数据库中的观看记录...");
+            List<History> historyList = AppDatabase.get().getHistoryDao().findAllRecent(0);
+            Logger.d("WebDAV: 数据库查询完成，结果: " + (historyList == null ? "null" : historyList.size() + " 条"));
+            
             if (historyList == null) {
+                Logger.w("WebDAV: 查询结果为null，创建空列表");
                 historyList = new java.util.ArrayList<>();
             }
             
+            // 修复数据中可能的编码问题（重点修复key中的站点名称部分）
+            Logger.d("WebDAV: 开始修复上传数据的编码问题...");
+            for (History h : historyList) {
+                String originalKey = h.getKey();
+                
+                // key格式: 站点key$视频ID$cid，需要单独修复站点key部分
+                String fixedKey = fixHistoryKey(originalKey);
+                if (!originalKey.equals(fixedKey)) {
+                    Logger.d("WebDAV: 修复key编码: '" + originalKey + "' -> '" + fixedKey + "'");
+                    h.setKey(fixedKey);
+                }
+                
+                String originalName = h.getVodName();
+                String fixedName = fixEncodingIfNeeded(originalName);
+                if (!originalName.equals(fixedName)) {
+                    Logger.d("WebDAV: 修复vodName编码: '" + originalName + "' -> '" + fixedName + "'");
+                    h.setVodName(fixedName);
+                }
+            }
+            
             Logger.d("WebDAV: 准备上传观看记录，共 " + historyList.size() + " 条");
+            
+            // 记录前3条数据的详细信息
+            for (int i = 0; i < Math.min(3, historyList.size()); i++) {
+                History h = historyList.get(i);
+                Logger.d("WebDAV: 上传记录[" + i + "] key=" + h.getKey() + ", vodName=" + h.getVodName());
+                // 检查key中的每个字符
+                String key = h.getKey();
+                StringBuilder hexDump = new StringBuilder();
+                for (int j = 0; j < Math.min(20, key.length()); j++) {
+                    hexDump.append(String.format("%04x ", (int)key.charAt(j)));
+                }
+                Logger.d("WebDAV: key前20字符的Unicode: " + hexDump.toString());
+            }
             
             String json = App.gson().toJson(historyList);
             if (TextUtils.isEmpty(json)) {
                 Logger.w("WebDAV: JSON数据为空");
                 json = "[]"; // 确保至少有一个有效的JSON数组
             }
+            
+            // 记录JSON的前500个字符
+            Logger.d("WebDAV: JSON前500字符: " + json.substring(0, Math.min(500, json.length())));
             
             // 确保目录存在（如果baseUrl包含子目录）
             if (syncMode == SyncMode.ACCOUNT && !TextUtils.isEmpty(baseUrl)) {
@@ -338,17 +379,21 @@ public class WebDAVSyncManager {
     public boolean downloadHistory() {
         if (!isConfigured()) {
             Logger.e("WebDAV: 未配置，无法下载观看记录");
+            Logger.e("WebDAV: baseUrl=" + baseUrl + ", username=" + username);
             return false;
         }
         
         try {
             String fileUrl = getFileUrl(HISTORY_FILE);
+            Logger.d("WebDAV: 检查文件是否存在: " + fileUrl);
             
             // 检查文件是否存在
             if (!sardine.exists(fileUrl)) {
-                Logger.d("WebDAV: 观看记录文件不存在，跳过下载");
+                Logger.w("WebDAV: 观看记录文件不存在，跳过下载");
                 return false;
             }
+            
+            Logger.d("WebDAV: 文件存在，开始下载");
             
             // 下载文件（使用循环读取，避免available()不准确的问题）
             InputStream is = sardine.get(fileUrl);
@@ -378,7 +423,72 @@ public class WebDAVSyncManager {
             }
             
             // 智能合并：比较本地和远程记录，保留较新的
-            List<History> localHistoryList = AppDatabase.get().getHistoryDao().findAll();
+            List<History> localHistoryList = AppDatabase.get().getHistoryDao().findAllRecent(0);
+            Logger.d("WebDAV: 本地记录数: " + localHistoryList.size());
+            Logger.d("WebDAV: 远程记录数: " + remoteHistoryList.size());
+            
+            // 修复远程记录的编码问题和时间戳
+            Logger.d("WebDAV: 开始修复远程记录编码和时间戳...");
+            long currentTime = System.currentTimeMillis();
+            long historyTimeLimit = currentTime - com.fongmi.android.tv.Constant.HISTORY_TIME; // 60天前
+            
+            for (History remote : remoteHistoryList) {
+                if (remote != null) {
+                    String originalKey = remote.getKey();
+                    // 修复key中的站点名称部分
+                    String fixedKey = fixHistoryKey(originalKey);
+                    if (!originalKey.equals(fixedKey)) {
+                        Logger.d("WebDAV: 修复远程key: '" + originalKey + "' -> '" + fixedKey + "'");
+                        remote.setKey(fixedKey);
+                    }
+                    
+                    String originalName = remote.getVodName();
+                    String fixedName = fixEncodingIfNeeded(originalName);
+                    if (!originalName.equals(fixedName)) {
+                        Logger.d("WebDAV: 修复远程vodName: '" + originalName + "' -> '" + fixedName + "'");
+                        remote.setVodName(fixedName);
+                    }
+                    
+                    // 关键修复：确保createTime在60天内，否则会被过滤掉！
+                    long remoteCreateTime = remote.getCreateTime();
+                    if (remoteCreateTime < historyTimeLimit) {
+                        Logger.d("WebDAV: 修复过期时间戳: " + remote.getVodName() + 
+                                 " createTime=" + remoteCreateTime + " -> " + currentTime + 
+                                 " (已过期 " + ((currentTime - remoteCreateTime) / (24*60*60*1000)) + " 天)");
+                        remote.setCreateTime(currentTime);
+                    }
+                    
+                    // 记录前3条远程数据的详细信息
+                    if (remoteHistoryList.indexOf(remote) < 3) {
+                        Logger.d("WebDAV: 远程记录[" + remoteHistoryList.indexOf(remote) + "]: " + 
+                                 remote.getVodName() + " (key=" + remote.getKey() + 
+                                 ", cid=" + remote.getCid() + 
+                                 ", createTime=" + remote.getCreateTime() + ")");
+                    }
+                }
+            }
+            
+            // 修复本地记录的编码问题（重要！）
+            Logger.d("WebDAV: 开始修复本地记录编码...");
+            for (History local : localHistoryList) {
+                if (local != null) {
+                    String originalKey = local.getKey();
+                    // 修复key中的站点名称部分
+                    String fixedKey = fixHistoryKey(originalKey);
+                    if (!originalKey.equals(fixedKey)) {
+                        Logger.d("WebDAV: 修复本地key: '" + originalKey + "' -> '" + fixedKey + "'");
+                        local.setKey(fixedKey);
+                    }
+                    
+                    // 记录前3条本地数据的详细信息
+                    if (localHistoryList.indexOf(local) < 3) {
+                        Logger.d("WebDAV: 本地记录[" + localHistoryList.indexOf(local) + "]: " + 
+                                 local.getVodName() + " (key=" + local.getKey() + 
+                                 ", cid=" + local.getCid() + 
+                                 ", createTime=" + local.getCreateTime() + ")");
+                    }
+                }
+            }
             
             // 创建本地记录的映射（key -> History）
             java.util.Map<String, History> localMap = new java.util.HashMap<>();
@@ -387,10 +497,13 @@ public class WebDAVSyncManager {
                     localMap.put(local.getKey(), local);
                 }
             }
+            Logger.d("WebDAV: 本地记录映射大小: " + localMap.size());
             
             // 合并远程记录
             List<History> toInsert = new java.util.ArrayList<>();
             List<History> toUpdate = new java.util.ArrayList<>();
+            
+            Logger.d("WebDAV: 开始合并 " + remoteHistoryList.size() + " 条远程记录...");
             
             for (History remote : remoteHistoryList) {
                 // 验证远程记录
@@ -403,43 +516,110 @@ public class WebDAVSyncManager {
                 
                 if (local == null) {
                     // 本地没有，直接添加
+                    Logger.d("WebDAV: 发现新记录: " + remote.getVodName() + " (key=" + remote.getKey() + ")");
                     toInsert.add(remote);
                 } else {
-                    // 本地有，比较createTime，保留较新的
-                    if (remote.getCreateTime() > local.getCreateTime()) {
-                        // 远程更新，更新本地
-                        toUpdate.add(remote);
-                    } else if (remote.getCreateTime() == local.getCreateTime()) {
-                        // 时间相同，比较position，保留进度更靠后的
-                        // 注意：position可能是C.TIME_UNSET（负数），需要处理
-                        long remotePos = remote.getPosition();
-                        long localPos = local.getPosition();
-                        // 如果都是有效值（>=0），比较大小；如果有无效值，保留有效值
+                    Logger.d("WebDAV: 本地已有记录: " + remote.getVodName() + ", 比较时间 remote=" + remote.getCreateTime() + " local=" + local.getCreateTime());
+                    
+                    // 改进的合并策略：优先保留较新的记录，但也要比较播放进度
+                    long remotePos = remote.getPosition();
+                    long localPos = local.getPosition();
+                    long remoteTime = remote.getCreateTime();
+                    long localTime = local.getCreateTime();
+                    
+                    boolean shouldUpdate = false;
+                    String reason = "";
+                    
+                    // 策略1：如果远程时间更新，直接更新
+                    if (remoteTime > localTime) {
+                        shouldUpdate = true;
+                        reason = "远程时间更新 (" + remoteTime + " > " + localTime + ")";
+                    }
+                    // 策略2：如果时间相同或相近（误差1秒内），比较播放进度
+                    else if (Math.abs(remoteTime - localTime) <= 1000) {
                         if (remotePos >= 0 && localPos >= 0) {
                             if (remotePos > localPos) {
-                                toUpdate.add(remote);
+                                shouldUpdate = true;
+                                reason = "播放进度更新 (" + remotePos + " > " + localPos + ")";
+                            } else {
+                                reason = "本地进度更新或相同";
                             }
                         } else if (remotePos >= 0 && localPos < 0) {
-                            // 远程有效，本地无效，更新
-                            toUpdate.add(remote);
+                            shouldUpdate = true;
+                            reason = "远程有有效进度，本地无效";
+                        } else {
+                            reason = "保留本地";
                         }
-                        // 否则保留本地，不更新
                     }
-                    // 否则保留本地，不更新
+                    // 策略3：即使本地时间更新，如果远程有更大的播放进度，也更新
+                    else if (remoteTime < localTime) {
+                        if (remotePos >= 0 && localPos >= 0 && remotePos > localPos + 60000) {
+                            // 远程进度领先本地超过1分钟，可能是用户在另一台设备继续观看
+                            shouldUpdate = true;
+                            reason = "虽然本地时间更新，但远程进度显著领先 (" + remotePos + " > " + localPos + ")";
+                        } else {
+                            reason = "本地时间更新 (" + localTime + " > " + remoteTime + ")，保留本地";
+                        }
+                    }
+                    
+                    if (shouldUpdate) {
+                        Logger.d("WebDAV: → 将更新本地 - " + reason);
+                        toUpdate.add(remote);
+                    } else {
+                        Logger.d("WebDAV: → 保留本地 - " + reason);
+                    }
                 }
             }
             
+            Logger.d("WebDAV: 合并完成，待插入 " + toInsert.size() + " 条，待更新 " + toUpdate.size() + " 条");
+            
             // 执行插入和更新
             if (!toInsert.isEmpty()) {
+                Logger.d("WebDAV: 开始插入 " + toInsert.size() + " 条新记录...");
                 AppDatabase.get().getHistoryDao().insert(toInsert);
                 Logger.d("WebDAV: 新增 " + toInsert.size() + " 条观看记录");
+                for (History h : toInsert) {
+                    Logger.d("WebDAV: ✓ 新增 - " + h.getVodName() + " (cid=" + h.getCid() + ", key=" + h.getKey() + ")");
+                }
+            } else {
+                Logger.d("WebDAV: 没有需要插入的新记录");
             }
+            
             if (!toUpdate.isEmpty()) {
+                Logger.d("WebDAV: 开始更新 " + toUpdate.size() + " 条记录...");
                 AppDatabase.get().getHistoryDao().update(toUpdate);
                 Logger.d("WebDAV: 更新 " + toUpdate.size() + " 条观看记录");
+                for (History h : toUpdate) {
+                    Logger.d("WebDAV: ✓ 更新 - " + h.getVodName() + " (cid=" + h.getCid() + ")");
+                }
+            } else {
+                Logger.d("WebDAV: 没有需要更新的记录");
             }
             
             Logger.d("WebDAV: 观看记录合并完成，远程 " + remoteHistoryList.size() + " 条，本地 " + localHistoryList.size() + " 条");
+            
+            // 验证数据库中的记录总数
+            List<History> allInDb = AppDatabase.get().getHistoryDao().findAllRecent(0);
+            Logger.d("WebDAV: 数据库中总共有 " + allInDb.size() + " 条观看记录");
+            
+            // 输出数据库中前5条记录的详细信息
+            Logger.d("WebDAV: === 数据库中的记录（前5条）===");
+            for (int i = 0; i < Math.min(5, allInDb.size()); i++) {
+                History h = allInDb.get(i);
+                Logger.d("WebDAV: [" + i + "] " + h.getVodName() + 
+                         " (key=" + h.getKey() + 
+                         ", cid=" + h.getCid() + 
+                         ", createTime=" + h.getCreateTime() + ")");
+            }
+            Logger.d("WebDAV: =========================");
+            
+            // 强制触发UI刷新（即使没有新增或更新，也刷新一次以确保显示）
+            Logger.d("WebDAV: 触发UI刷新事件");
+            App.post(() -> {
+                RefreshEvent.history();
+                Logger.d("WebDAV: UI刷新事件已发送到主线程");
+            });
+            
             return true; // 即使远程为空，也算同步成功
         } catch (Exception e) {
             Logger.e("WebDAV: 观看记录下载失败: " + e.getMessage());
@@ -754,6 +934,77 @@ public class WebDAVSyncManager {
      */
     public void reloadConfig() {
         loadConfig();
+    }
+    
+    /**
+     * 修复History的key中的站点名称编码
+     * key格式: 站点key$视频ID$cid
+     */
+    private String fixHistoryKey(String key) {
+        if (key == null || key.isEmpty()) {
+            return key;
+        }
+        
+        try {
+            // 使用AppDatabase.SYMBOL分隔
+            String symbol = com.fongmi.android.tv.db.AppDatabase.SYMBOL;
+            String[] parts = key.split(java.util.regex.Pattern.quote(symbol));
+            
+            if (parts.length >= 3) {
+                // parts[0] = 站点key, parts[1] = 视频ID, parts[2] = cid
+                String siteKey = parts[0];
+                String fixedSiteKey = fixEncodingIfNeeded(siteKey);
+                
+                if (!siteKey.equals(fixedSiteKey)) {
+                    // 重新组装key
+                    StringBuilder newKey = new StringBuilder(fixedSiteKey);
+                    for (int i = 1; i < parts.length; i++) {
+                        newKey.append(symbol).append(parts[i]);
+                    }
+                    return newKey.toString();
+                }
+            }
+        } catch (Exception e) {
+            Logger.e("WebDAV: 修复History key失败: " + e.getMessage());
+        }
+        
+        return key;
+    }
+    
+    /**
+     * 修复字符串编码问题
+     * 尝试将错误编码的UTF-8字符串修复为正确的UTF-8
+     */
+    private String fixEncodingIfNeeded(String str) {
+        if (str == null || str.isEmpty()) {
+            return str;
+        }
+        
+        try {
+            // 检查字符串中是否包含明显的乱码特征
+            // 1. 包含替换字符 U+FFFD
+            // 2. 包含异常的低位控制字符
+            boolean needsFix = false;
+            for (int i = 0; i < str.length(); i++) {
+                char c = str.charAt(i);
+                if (c == '\uFFFD' || (c >= 0x80 && c < 0xA0)) {
+                    needsFix = true;
+                    break;
+                }
+            }
+            
+            if (needsFix) {
+                // 尝试修复：假设原始数据是UTF-8，但被错误地当作ISO-8859-1解码
+                byte[] bytes = str.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+                String fixed = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+                Logger.d("WebDAV: 编码修复 '" + str + "' -> '" + fixed + "'");
+                return fixed;
+            }
+        } catch (Exception e) {
+            Logger.e("WebDAV: 编码修复失败: " + e.getMessage());
+        }
+        
+        return str;
     }
 }
 

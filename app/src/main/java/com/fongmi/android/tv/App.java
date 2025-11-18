@@ -54,7 +54,9 @@ public class App extends Application {
         executor = Executors.newFixedThreadPool(Constant.THREAD_POOL);
         handler = HandlerCompat.createAsync(Looper.getMainLooper());
         time = System.currentTimeMillis();
-        gson = new Gson();
+        gson = new com.google.gson.GsonBuilder()
+                .disableHtmlEscaping()
+                .create();
         cleanTask = this::checkCacheClean;
         syncTask = this::checkWebDAVSync;
         appJustLaunched = true;
@@ -227,18 +229,8 @@ public class App extends Application {
         if (manager.isConfigured()) {
             // 应用启动时，如果已配置WebDAV，立即执行一次同步（下载远程数据）
             // 这样新设备配置后，下次启动应用时就能看到其他设备的历史记录
-            App.execute(() -> {
-                try {
-                    Logger.d("App: 应用启动，执行WebDAV同步");
-                    // 先上传本地记录
-                    manager.uploadHistory();
-                    // 再下载远程记录并合并
-                    manager.downloadHistory();
-                    Logger.d("App: WebDAV同步完成");
-                } catch (Exception e) {
-                    Logger.e("App: WebDAV同步失败: " + e.getMessage());
-                }
-            });
+            Logger.d("App: WebDAV已配置，准备执行同步");
+            manager.syncHistory(true); // 使用统一的同步方法，包含防重复逻辑
             
             // 如果启用了自动同步，设置定期同步
             if (Setting.isWebDAVAutoSync()) {
@@ -246,6 +238,8 @@ public class App extends Application {
                 // 延迟执行下次同步，避免影响启动速度
                 post(syncTask, interval * 60 * 1000L);
             }
+        } else {
+            Logger.d("App: WebDAV未配置，跳过同步");
         }
     }
     

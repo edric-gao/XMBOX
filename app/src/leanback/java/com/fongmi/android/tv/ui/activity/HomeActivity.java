@@ -245,7 +245,24 @@ public class HomeActivity extends BaseActivity implements CustomTitleView.Listen
     }
 
     private void getHistory(boolean renew) {
-        List<History> items = History.get();
+        // 获取所有视频源的观看记录（最近60天）
+        List<History> items = History.getAll();
+        com.github.catvod.utils.Logger.d("HomeActivity: 获取观看记录，共 " + items.size() + " 条");
+        
+        // 对比一下数据库中所有记录
+        List<com.fongmi.android.tv.bean.History> allInDb = com.fongmi.android.tv.db.AppDatabase.get().getHistoryDao().findAllRecent(0);
+        com.github.catvod.utils.Logger.d("HomeActivity: 数据库总记录数: " + allInDb.size() + " 条（包含所有时间）");
+        
+        if (items.size() < allInDb.size()) {
+            com.github.catvod.utils.Logger.w("HomeActivity: 有 " + (allInDb.size() - items.size()) + " 条记录因为时间过滤被隐藏");
+        }
+        
+        for (History h : items) {
+            com.github.catvod.utils.Logger.d("HomeActivity: 记录 - " + h.getVodName() + 
+                                            " (cid=" + h.getCid() + 
+                                            ", createTime=" + h.getCreateTime() + ")");
+        }
+        
         int historyIndex = getHistoryIndex();
         int recommendIndex = getRecommendIndex();
         boolean exist = recommendIndex - historyIndex == 2;

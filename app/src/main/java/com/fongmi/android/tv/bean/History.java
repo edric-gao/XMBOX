@@ -248,6 +248,10 @@ public class History {
         return AppDatabase.get().getHistoryDao().find(cid, System.currentTimeMillis() - Constant.HISTORY_TIME);
     }
 
+    public static List<History> getAll() {
+        return AppDatabase.get().getHistoryDao().findAllRecent(System.currentTimeMillis() - Constant.HISTORY_TIME);
+    }
+
     public static History find(String key) {
         return AppDatabase.get().getHistoryDao().find(VodConfig.getCid(), key);
     }
@@ -272,8 +276,15 @@ public class History {
     }
 
     public void update() {
-        merge(find(), false);
-        save();
+        try {
+            com.github.catvod.utils.Logger.d("History.update: 开始更新观看记录 key=" + getKey());
+            merge(find(), false);
+            save();
+            com.github.catvod.utils.Logger.d("History.update: 更新成功");
+        } catch (Exception e) {
+            com.github.catvod.utils.Logger.e("History.update: 更新失败 - " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public History update(int cid) {
@@ -287,6 +298,7 @@ public class History {
     }
 
     public History save() {
+        com.github.catvod.utils.Logger.d("History.save: key=" + getKey() + ", vodName=" + getVodName());
         AppDatabase.get().getHistoryDao().insertOrUpdate(this);
         return this;
     }

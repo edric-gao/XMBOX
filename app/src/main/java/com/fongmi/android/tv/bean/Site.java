@@ -105,10 +105,35 @@ public class Site implements Parcelable {
 
     public static Site objectFrom(JsonElement element) {
         try {
-            return App.gson().fromJson(element, Site.class);
+            Site site = App.gson().fromJson(element, Site.class);
+            // 尝试修复可能的编码问题
+            if (site != null && site.getKey() != null) {
+                site.setKey(fixEncoding(site.getKey()));
+                if (site.getName() != null) {
+                    site.setName(fixEncoding(site.getName()));
+                }
+            }
+            return site;
         } catch (Exception e) {
             return new Site();
         }
+    }
+    
+    private static String fixEncoding(String str) {
+        if (str == null || str.isEmpty()) return str;
+        try {
+            // 检查是否包含乱码字符（替换字符 U+FFFD）
+            if (str.indexOf('\uFFFD') >= 0) {
+                // 尝试用ISO-8859-1重新解码为UTF-8
+                byte[] bytes = str.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+                String fixed = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+                com.github.catvod.utils.Logger.d("Site.fixEncoding: 修复编码 '" + str + "' -> '" + fixed + "'");
+                return fixed;
+            }
+        } catch (Exception e) {
+            com.github.catvod.utils.Logger.e("Site.fixEncoding: 修复失败 - " + e.getMessage());
+        }
+        return str;
     }
 
     public static Site get(String key) {
@@ -133,6 +158,13 @@ public class Site implements Parcelable {
 
     public void setKey(@NonNull String key) {
         this.key = key;
+        // 检查key中是否有异常字符
+        for (int i = 0; i < key.length(); i++) {
+            char c = key.charAt(i);
+            if (c == 0xFFFD || c < 0x20 || (c >= 0x7F && c < 0xA0)) {
+                com.github.catvod.utils.Logger.w("Site.setKey: 检测到异常字符 at position " + i + ": U+" + String.format("%04X", (int)c));
+            }
+        }
     }
 
     public String getName() {
@@ -141,6 +173,15 @@ public class Site implements Parcelable {
 
     public void setName(String name) {
         this.name = name;
+        // 检查name中是否有异常字符
+        if (name != null) {
+            for (int i = 0; i < name.length(); i++) {
+                char c = name.charAt(i);
+                if (c == 0xFFFD || c < 0x20 || (c >= 0x7F && c < 0xA0)) {
+                    com.github.catvod.utils.Logger.w("Site.setName: 检测到异常字符 at position " + i + ": U+" + String.format("%04X", (int)c) + " in name: " + name);
+                }
+            }
+        }
     }
 
     public String getApi() {
