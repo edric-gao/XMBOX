@@ -49,10 +49,21 @@ cleanup_project.sh
 # System files
 .DS_Store
 Thumbs.db
+*.swp
+*~
+
+# Editor directories and files
+.vscode/
+.vs/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # Duplicate release directories
 XMBOX-Release/
 
 # Tools and utilities (not part of the project)
-other/tools/bfg.jar
-other/tools/cleaner.bat
+other/
+tools/
