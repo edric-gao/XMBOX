@@ -46,6 +46,7 @@ import com.fongmi.android.tv.ui.activity.HistoryActivity;
 import com.fongmi.android.tv.ui.activity.KeepActivity;
 import com.fongmi.android.tv.ui.activity.VideoActivity;
 import com.airbnb.lottie.LottieAnimationView;
+import com.fongmi.android.tv.ui.adapter.HistoryCardAdapter;
 import com.fongmi.android.tv.ui.adapter.TypeAdapter;
 import com.fongmi.android.tv.ui.base.BaseFragment;
 import com.fongmi.android.tv.ui.dialog.ConfigDialog;
@@ -80,6 +81,7 @@ public class VodFragment extends BaseFragment implements SiteCallback, FilterCal
     private FragmentVodBinding mBinding;
     private SiteViewModel mViewModel;
     private TypeAdapter mAdapter;
+    private HistoryCardAdapter mHistoryAdapter;
     private Runnable mRunnable;
     private List<String> mHots;
     private Result mResult;
@@ -106,10 +108,12 @@ public class VodFragment extends BaseFragment implements SiteCallback, FilterCal
         EventBus.getDefault().register(this);
         setRecyclerView();
         setViewModel();
+        setupHistoryRecycler();
         initStartupState(); // 根据是否已有配置来设置初始状态
         setLogo();
         initHot();
         getHot();
+        loadHistory();
         // 检查是否需要显示上次播放弹窗
         checkLastWatchDialog();
     }
@@ -150,6 +154,7 @@ public class VodFragment extends BaseFragment implements SiteCallback, FilterCal
         mBinding.filter.setOnClickListener(this::onFilter);
         mBinding.search.setOnClickListener(this::onSearch);
         mBinding.history.setOnClickListener(this::onHistory);
+        mBinding.historyMore.setOnClickListener(this::onHistory);
         mBinding.filter.setOnLongClickListener(this::onLink);
         mBinding.pager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
             @Override
@@ -462,6 +467,35 @@ public class VodFragment extends BaseFragment implements SiteCallback, FilterCal
         HistoryActivity.start(getActivity());
     }
 
+    private void setupHistoryRecycler() {
+        mBinding.historyRecycler.setLayoutManager(
+            new androidx.recyclerview.widget.LinearLayoutManager(
+                getContext(), 
+                androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, 
+                false
+            )
+        );
+        mHistoryAdapter = new HistoryCardAdapter(item -> {
+            VideoActivity.start(getActivity(), item.getSiteKey(), item.getVodId(), item.getVodName(), item.getVodPic());
+        });
+        mBinding.historyRecycler.setAdapter(mHistoryAdapter);
+    }
+
+    private void loadHistory() {
+        List<History> histories = History.get();
+        
+        if (histories == null || histories.isEmpty()) {
+            mBinding.historySection.setVisibility(View.GONE);
+        } else {
+            mBinding.historySection.setVisibility(View.VISIBLE);
+            mHistoryAdapter.setItems(histories);
+        }
+    }
+
+    private void refreshHistory() {
+        loadHistory();
+    }
+
     private void showProgress() {
         mBinding.retry.setVisibility(View.GONE);
         mBinding.progress.getRoot().setVisibility(View.VISIBLE);
@@ -523,6 +557,9 @@ public class VodFragment extends BaseFragment implements SiteCallback, FilterCal
             case SIZE:
                 homeContent();
                 break;
+            case HISTORY:
+                refreshHistory();
+                break;
         }
     }
 
@@ -577,6 +614,12 @@ public class VodFragment extends BaseFragment implements SiteCallback, FilterCal
         if (mBinding.pager.getAdapter() == null) return true;
         if (mBinding.pager.getAdapter().getCount() == 0) return true;
         return getFragment().canBack();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        refreshHistory();
     }
 
     @Override

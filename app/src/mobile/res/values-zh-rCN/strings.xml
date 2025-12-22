@@ -48,6 +48,10 @@
     <string name="timer_delay">延长 15 分钟</string>
     <string name="timer_cancel">取消定时器</string>
 
+    <!-- Home -->
+    <string name="home_history">观看记录</string>
+    <string name="home_more">更多</string>
+
     <!-- Hint -->
     <string name="shortcut"> 已于主萤幕新增捷径。</string>
 
