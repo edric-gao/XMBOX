@@ -485,25 +485,11 @@ public class VideoActivity extends BaseActivity implements CustomKeyDownVod.List
     }
 
     private void setText(TextView view, int resId, String text) {
-        // 检查是否是演员或导演字段
-        boolean isActor = view.getId() == R.id.actor;
-        boolean isDirector = view.getId() == R.id.director;
-        
-        if (isActor || isDirector) {
-            // 使用 CastUtil 处理演员/导演点击
-            CastMember.CastType type = isActor ? CastMember.CastType.ACTOR : CastMember.CastType.DIRECTOR;
-            view.setText(CastUtil.getClickableSpan(this, resId, text, type), TextView.BufferType.SPANNABLE);
-            view.setVisibility(text.isEmpty() ? View.GONE : View.VISIBLE);
-            view.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
-            view.setLinkTextColor(ContextCompat.getColor(view.getContext(), R.color.primary));
-            view.setTag(text);
-        } else {
-            view.setText(getSpan(resId, text), TextView.BufferType.SPANNABLE);
-            view.setVisibility(text.isEmpty() ? View.GONE : View.VISIBLE);
-            view.setLinkTextColor(ContextCompat.getColor(view.getContext(), R.color.primary));
-            CustomMovement.bind(view);
-            view.setTag(text);
-        }
+        view.setText(getSpan(resId, text), TextView.BufferType.SPANNABLE);
+        view.setVisibility(text.isEmpty() ? View.GONE : View.VISIBLE);
+        view.setLinkTextColor(ContextCompat.getColor(view.getContext(), R.color.primary));
+        CustomMovement.bind(view);
+        view.setTag(text);
     }
 
     private SpannableStringBuilder getSpan(int resId, String text) {

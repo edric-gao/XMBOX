@@ -16,11 +16,11 @@ public class CastUtil {
     
     /**
      * 解析演职人员字符串为 CastMember 列表
-     * 支持逗号(,)和斜杠(/)作为分隔符
+     * 支持多种分隔符格式，智能识别
      * 自动清理 HTML 标签和前后空格
      * 过滤空字符串
      * 
-     * @param text 演职人员字符串（可能包含多个人名，用逗号或斜杠分隔）
+     * @param text 演职人员字符串（可能包含多个人名）
      * @param type 演职人员类型（演员或导演）
      * @return 解析后的 CastMember 列表
      */
@@ -40,13 +40,51 @@ public class CastUtil {
             return members;
         }
         
-        // 使用正则表达式分割字符串，支持逗号和斜杠作为分隔符
-        String[] names = cleanText.split("[,/]");
+        // 智能分割：尝试多种分隔符
+        String[] names = null;
+        
+        // 1. 优先尝试逗号分隔
+        if (cleanText.contains(",")) {
+            names = cleanText.split(",");
+        }
+        // 2. 尝试斜杠分隔
+        else if (cleanText.contains("/")) {
+            names = cleanText.split("/");
+        }
+        // 3. 尝试中文顿号分隔
+        else if (cleanText.contains("、")) {
+            names = cleanText.split("、");
+        }
+        // 4. 尝试多个空格分隔（2个或以上）
+        else if (cleanText.matches(".*\\s{2,}.*")) {
+            names = cleanText.split("\\s{2,}");
+        }
+        // 5. 尝试单个空格分隔（但要小心，可能是名字中的空格）
+        else if (cleanText.contains(" ")) {
+            // 如果有多个空格分隔的词，且每个词长度合理（2-10个字符），则认为是多个名字
+            String[] parts = cleanText.split("\\s+");
+            if (parts.length > 1 && parts.length <= 20) {
+                boolean allReasonable = true;
+                for (String part : parts) {
+                    if (part.length() < 2 || part.length() > 10) {
+                        allReasonable = false;
+                        break;
+                    }
+                }
+                if (allReasonable) {
+                    names = parts;
+                }
+            }
+        }
+        
+        // 如果没有找到分隔符，整个字符串作为一个名字
+        if (names == null) {
+            names = new String[]{cleanText};
+        }
         
         // 遍历所有人名
-        for (String name : names) {
-            // 去除前后空格
-            name = name.trim();
+        for (int i = 0; i < names.length; i++) {
+            String name = names[i].trim();
             
             // 过滤空字符串
             if (!name.isEmpty()) {

@@ -94,8 +94,6 @@ public class CastWorksActivity extends BaseActivity implements VodAdapter.OnClic
         mBinding.recycler.addItemDecoration(new SpaceItemDecoration(8));
         mBinding.recycler.setAdapter(mAdapter = new VodAdapter(this, Style.rect(), Product.getSpec(this)));
         
-        android.util.Log.d("CastWorks", "RecyclerView setup complete");
-        
         // 设置 ViewModel
         mViewModel = new ViewModelProvider(this).get(SiteViewModel.class);
         mViewModel.search.observe(this, this::setResult);
@@ -113,8 +111,6 @@ public class CastWorksActivity extends BaseActivity implements VodAdapter.OnClic
      * 搜索演职人员的作品
      */
     private void searchWorks() {
-        android.util.Log.d("CastWorks", "Starting search for: " + mCastName);
-        
         // 停止之前的搜索
         stopSearch();
         
@@ -132,10 +128,9 @@ public class CastWorksActivity extends BaseActivity implements VodAdapter.OnClic
      */
     private void search(Site site) {
         try {
-            android.util.Log.d("CastWorks", "Searching in site: " + site.getName() + " for: " + mCastName);
             mViewModel.searchContent(site, mCastName, false);
         } catch (Throwable e) {
-            android.util.Log.e("CastWorks", "Search error in site: " + site.getName(), e);
+            e.printStackTrace();
         }
     }
     
@@ -153,30 +148,8 @@ public class CastWorksActivity extends BaseActivity implements VodAdapter.OnClic
      * 处理搜索结果
      */
     private void setResult(Result result) {
-        android.util.Log.d("CastWorks", "=== setResult START ===");
-        android.util.Log.d("CastWorks", "Result size: " + result.getList().size());
-        android.util.Log.d("CastWorks", "Current adapter count: " + mAdapter.getItemCount());
-        
-        if (result.getList().isEmpty()) {
-            android.util.Log.d("CastWorks", "Result is empty, skipping");
-            return;
-        }
-        
-        android.util.Log.d("CastWorks", "Adding " + result.getList().size() + " items to adapter");
-        mAdapter.addAll(result.getList());
-        android.util.Log.d("CastWorks", "After addAll, adapter count: " + mAdapter.getItemCount());
-        
-        // 强制刷新 RecyclerView
-        runOnUiThread(() -> {
-            mAdapter.notifyDataSetChanged();
-            android.util.Log.d("CastWorks", "After notifyDataSetChanged:");
-            android.util.Log.d("CastWorks", "  - Adapter count: " + mAdapter.getItemCount());
-            android.util.Log.d("CastWorks", "  - RecyclerView child count: " + mBinding.recycler.getChildCount());
-            android.util.Log.d("CastWorks", "  - RecyclerView visibility: " + mBinding.recycler.getVisibility());
-            android.util.Log.d("CastWorks", "  - RecyclerView width x height: " + mBinding.recycler.getWidth() + " x " + mBinding.recycler.getHeight());
-        });
-        
-        android.util.Log.d("CastWorks", "=== setResult END ===");
+        if (result.getList().isEmpty()) return;
+        runOnUiThread(() -> mAdapter.addAll(result.getList()));
     }
     
     /**

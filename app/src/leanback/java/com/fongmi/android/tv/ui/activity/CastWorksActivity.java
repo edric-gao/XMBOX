@@ -62,7 +62,7 @@ public class CastWorksActivity extends BaseActivity implements VodPresenter.OnCl
     }
     
     @Override
-    protected void initView(Bundle savedInstanceState) {
+    protected void initView() {
         // 获取传递的参数
         mCastName = getIntent().getStringExtra("name");
         String typeStr = getIntent().getStringExtra("type");
@@ -76,7 +76,6 @@ public class CastWorksActivity extends BaseActivity implements VodPresenter.OnCl
         
         // 设置 RecyclerView
         mBinding.recycler.setHorizontalSpacing(ResUtil.dp2px(16));
-        mBinding.recycler.setRowHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
         mBinding.recycler.setAdapter(new ItemBridgeAdapter(mAdapter = new ArrayObjectAdapter(new VodPresenter(this))));
         mBinding.recycler.addOnChildViewHolderSelectedListener(new OnChildViewHolderSelectedListener() {
             @Override

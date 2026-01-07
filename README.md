@@ -2,7 +2,7 @@
   </h1>
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.1.1-blue.svg)
+![Version](https://img.shields.io/badge/version-3.1.3-blue.svg)
 ![Android](https://img.shields.io/badge/platform-Android-green.svg)
 ![License](https://img.shields.io/badge/license-GPL--3.0-orange.svg)
 ![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)
@@ -19,6 +19,7 @@
 ### 📺 多平台支持
 - **Android TV版本** - 针对电视、盒子优化的遥控器界面
 - **手机版本** - 触屏友好的移动端界面
+- **平板版本** - 专为平板优化的大屏界面
 - **多架构支持** - ARM64-V8A 和 ARM V7A 双架构
 
 ### 🎬 强大的播放功能
@@ -38,14 +39,16 @@
 
 ## 📥 下载安装
 
-### 最新版本: v3.1.1
+### 最新版本: v3.1.3
 
 | 平台 | ARM64-V8A | ARM V7A |
 |------|-----------|---------|
-| **📱 手机版** | [下载 (34.4MB)](https://github.com/Tosencen/XMBOX-Release/raw/main/apk/release/v3.1.0/mobile-arm64_v8a-v3.1.0.apk) | [下载 (30.4MB)](https://github.com/Tosencen/XMBOX-Release/raw/main/apk/release/v3.1.0/mobile-armeabi_v7a-v3.1.0.apk) |
-| **📺 TV版** | [下载 (34.5MB)](https://github.com/Tosencen/XMBOX-Release/raw/main/apk/release/v3.1.0/leanback-arm64_v8a-v3.1.0.apk) | [下载 (30.5MB)](https://github.com/Tosencen/XMBOX-Release/raw/main/apk/release/v3.1.0/leanback-armeabi_v7a-v3.1.0.apk) |
+| **📱 手机版** | [下载](https://github.com/Tosencen/XMBOX-Release/raw/main/apk/release/v3.1.3/mobile-arm64_v8a-v3.1.3.apk) | [下载](https://github.com/Tosencen/XMBOX-Release/raw/main/apk/release/v3.1.3/mobile-armeabi_v7a-v3.1.3.apk) |
+| **📱 平板版** | [下载](https://github.com/Tosencen/XMBOX-Release/raw/main/apk/release/v3.1.3/tablet-arm64_v8a-v3.1.3.apk) | [下载](https://github.com/Tosencen/XMBOX-Release/raw/main/apk/release/v3.1.3/tablet-armeabi_v7a-v3.1.3.apk) |
+| **📺 TV版** | [下载](https://github.com/Tosencen/XMBOX-Release/raw/main/apk/release/v3.1.3/leanback-arm64_v8a-v3.1.3.apk) | [下载](https://github.com/Tosencen/XMBOX-Release/raw/main/apk/release/v3.1.3/leanback-armeabi_v7a-v3.1.3.apk) |
 
 ### 📁 版本历史
+- **v3.1.3**: [查看v3.1.3版本](https://github.com/Tosencen/XMBOX-Release/tree/main/apk/release/v3.1.3) - 新增平板版本，优化演员列表和视频封面显示
 - **v3.1.1**: [查看v3.1.1版本](https://github.com/Tosencen/XMBOX-Release/tree/main/apk/release/v3.1.1) - 新增WebDAV同步功能和更新安装器
 - **v3.1.0**: [查看v3.1.0版本](https://github.com/Tosencen/XMBOX-Release/tree/main/apk/release/v3.1.0) - 定时器优化和画中画修复版本
 - **v3.0.9**: [查看v3.0.9版本](https://github.com/Tosencen/XMBOX-Release/tree/main/apk/release/v3.0.9) - 新增直播开关控制和UI交互优化
@@ -135,6 +138,32 @@ XMBOX/
 - **数据库**: Room
 
 ## 📝 更新日志
+
+### v3.1.3 (2025-01-07)
+
+#### ✨ 新功能
+* **平板版本** - 新增专为平板优化的独立版本
+  * 针对大屏幕优化的布局设计
+  * 4列网格布局，充分利用平板屏幕空间
+  * 优化的触控交互体验
+
+#### 🐛 修复
+* **演员列表闪烁** - 修复手机版和TV版演员列表页面的闪烁问题
+  * 使用 `runOnUiThread()` 确保UI更新的线程安全
+  * 优化RecyclerView适配器更新逻辑
+* **视频封面圆角** - 修复视频封面渐变遮罩圆角不匹配问题
+  * 统一手机版、平板版和TV版的圆角半径为12dp
+  * 改进视觉一致性
+
+#### 🎨 UI优化
+* **演员名字解析** - 增强演员/导演名字的智能分隔符识别
+  * 支持逗号、斜杠、中文顿号、多空格等多种分隔符
+  * 自动适配不同视频源的格式差异
+  * 提升演员作品搜索的准确性
+
+#### 🔧 技术改进
+* **代码清理** - 移除调试日志，优化代码质量
+* **构建优化** - 改进构建流程，支持平板版本编译
 
 ### v3.1.1 (2025-11-10)
 
